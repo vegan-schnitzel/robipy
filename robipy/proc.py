@@ -1,3 +1,7 @@
+"""
+Mostly climate data processing.
+"""
+
 import numpy as np
 
 
@@ -18,3 +22,15 @@ def global_mean(data, lat):
     w = np.cos(np.deg2rad(lat))
     data_gm = np.average(data_zm, weights=w, axis=1)
     return data_gm
+
+
+def pa_to_hpa(ds, var='psl'):
+    """
+    Convert pressure from pascal to hectopascal.
+    """
+    #if ds[var].attrs['units'] == 'hPa':
+    #    raise ValueError(f"Variable '{var}' already appears to be in hPa.")
+    attrs = ds[var].attrs.copy()
+    ds[var] = ds[var] / 100
+    ds[var].attrs = attrs
+    ds[var].attrs['units'] = 'hPa'

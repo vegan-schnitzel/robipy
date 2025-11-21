@@ -1,6 +1,11 @@
+"""
+Everything related to creating figures.
+"""
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 
 def circular_stereo(ax):
     """
@@ -24,20 +29,80 @@ def coastlines(ax):
     ax.coastlines('110m', lw=0.75, alpha=0.5)
 
 
+def gridlines(ax):
+    """
+    Add gridlines with decent default options to cartopy plot.
+    """
+    ax.gridlines(linewidth=0.4, alpha=0.4, color='k', linestyle='--')
+
+
+def bhx_box(ax, res=50):
+    """
+    Draw BHx bounding box (adding points to increase resolution).
+    """
+    ax.plot(
+        np.append(np.linspace(140,230,res), [230, 140, 140]),
+        np.append(np.repeat(73,res), [90, 90, 73]),
+        marker=None, c='k', lw=1, alpha=0.9, transform=ccrs.PlateCarree()
+    )
+
 class MidpointNormalize(mpl.colors.Normalize):
     """
     Choose data range while preserving midpoint in divergent colorbars.
+    Caution: Should be used together with ClippedAutoLocator or AutoMidpointLocator
+             to avoid inconsistent colorbar labels!
 
-    Create a subclass of Normalize based on:
+    Creates a subclass of mpl.colors.Normalize based on:
     https://stackoverflow.com/a/50003503
     """
-    def __init__(self, vmin, vmax, midpoint=0, clip=False):
+    def __init__(self, vmin=None, vmax=None, midpoint=0, clip=False):
         self.midpoint = midpoint
-        mpl.colors.Normalize.__init__(self, vmin, vmax, clip)
+        super().__init__(vmin, vmax, clip)
 
-    def __call__(self, value, clip=None):
-        normalized_min = max(0, 1 / 2 * (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
-        normalized_max = min(1, 1 / 2 * (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
-        normalized_mid = 0.5
-        x, y = [self.vmin, self.midpoint, self.vmax], [normalized_min, normalized_mid, normalized_max]
+    def __call__(self, value):
+        nmin, nmid, nmax = self._normalized_bounds()
+        x, y = [self.vmin, self.midpoint, self.vmax], [nmin, nmid, nmax]
         return np.ma.masked_array(np.interp(value, x, y))
+
+    # somehow breaks the range of the colorbar (?)
+    #def inverse(self, value):
+    #    nmin, nmid, nmax = self._normalized_bounds()
+    #    x, y = [nmin, nmid, nmax], [self.vmin, self.midpoint, self.vmax]
+    #    return np.interp(value, x, y)
+
+    def _normalized_bounds(self):
+        nmin = max(0, 1 / 2 * (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
+        nmax = min(1, 1 / 2 * (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
+        return nmin, 0.5, nmax
+
+
+class ClippedAutoLocator(mpl.ticker.AutoLocator):
+    """
+    Subclass of mpl.ticker.AutoLocator that does not use
+    out-of-range colorbar ticks.
+    """
+    def tick_values(self, vmin, vmax):
+        ticks = super().tick_values(vmin, vmax)
+        return ticks[(ticks >= vmin) & (ticks <= vmax)]
+
+
+class AutoMidpointLocator(mpl.ticker.AutoLocator):
+    """
+    AutoLocator-based tick locator that forces ticks at vmin, midpoint, vmax.
+    Other ticks (if any) follow AutoLocator's logic.
+    """
+    def __init__(self, midpoint):
+        super().__init__()
+        self.midpoint = midpoint
+
+    def tick_values(self, vmin, vmax):
+        # get default "nice" clipped ticks
+        ticks = super().tick_values(vmin, vmax)
+        ticks = ticks[(ticks >= vmin) & (ticks <= vmax)]
+        # replace the edge ticks with exact vmin/vmax
+        ticks[0] = vmin
+        ticks[-1] = vmax
+        # find the auto tick closest to midpoint
+        idx = np.abs(ticks - self.midpoint).argmin()
+        ticks[idx] = self.midpoint
+        return ticks
