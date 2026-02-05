@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import calendar
 
 def circular_stereo(ax):
     """
@@ -45,6 +46,22 @@ def bhx_box(ax, res=50):
         np.append(np.repeat(73,res), [90, 90, 73]),
         marker=None, c='k', lw=1, alpha=0.9, transform=ccrs.PlateCarree()
     )
+
+
+def months_as_letter(ax):
+    """
+    Translates integer month values to single-letter abbreviation.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes
+    """
+    formatter = mpl.ticker.FuncFormatter(
+        # why +1 though?
+        lambda x, pos: calendar.month_abbr[x+1][0]
+    )
+    ax.xaxis.set_major_formatter(formatter)
+
 
 class MidpointNormalize(mpl.colors.Normalize):
     """
