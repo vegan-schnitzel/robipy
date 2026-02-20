@@ -81,45 +81,62 @@ class MidpointNormalize(mpl.colors.Normalize):
         x, y = [self.vmin, self.midpoint, self.vmax], [nmin, nmid, nmax]
         return np.ma.masked_array(np.interp(value, x, y))
 
-    # somehow breaks the range of the colorbar (?)
-    #def inverse(self, value):
-    #    nmin, nmid, nmax = self._normalized_bounds()
-    #    x, y = [nmin, nmid, nmax], [self.vmin, self.midpoint, self.vmax]
-    #    return np.interp(value, x, y)
-
     def _normalized_bounds(self):
         nmin = max(0, 1 / 2 * (1 - abs((self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
         nmax = min(1, 1 / 2 * (1 + abs((self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
         return nmin, 0.5, nmax
 
 
-class ClippedAutoLocator(mpl.ticker.AutoLocator):
+class ClippedAutoLocator(mpl.ticker.MaxNLocator):
     """
-    Subclass of mpl.ticker.AutoLocator that does not use
-    out-of-range colorbar ticks.
+    Subclass of mpl.ticker.AutoLocator that strictly clips ticks to [vmin, vmax].
     """
+    def __init__(self, nbins='auto', steps=[1, 2, 2.5, 5, 10]):
+        super().__init__(nbins=nbins, steps=steps)
+
     def tick_values(self, vmin, vmax):
         ticks = super().tick_values(vmin, vmax)
         return ticks[(ticks >= vmin) & (ticks <= vmax)]
 
 
-class AutoMidpointLocator(mpl.ticker.AutoLocator):
+class MidpointAutoLocator(mpl.ticker.AutoLocator):
     """
-    AutoLocator-based tick locator that forces ticks at vmin, midpoint, vmax.
+    Tick locator that forces ticks at vmin, midpoint, vmax.
     Other ticks (if any) follow AutoLocator's logic.
     """
-    def __init__(self, midpoint):
-        super().__init__()
+    def __init__(self, midpoint=0):
         self.midpoint = midpoint
+        super().__init__()
 
     def tick_values(self, vmin, vmax):
-        # get default "nice" clipped ticks
+        # get default clipped ticks
         ticks = super().tick_values(vmin, vmax)
         ticks = ticks[(ticks >= vmin) & (ticks <= vmax)]
+
         # replace the edge ticks with exact vmin/vmax
         ticks[0] = vmin
         ticks[-1] = vmax
+
         # find the auto tick closest to midpoint
         idx = np.abs(ticks - self.midpoint).argmin()
         ticks[idx] = self.midpoint
+
         return ticks
+
+
+class MidpointFormatter(mpl.ticker.FuncFormatter):
+    """
+    Formatter for mixed decimal/integer ticks.
+    """
+    def __init__(self, vmin, vmax, midpoint=0, digit=2):
+        self.vmin = vmin
+        self.vmax = vmax
+        self.midpoint = midpoint
+        self.digit = digit
+        super().__init__(self._format)
+
+    def _format(self, x, pos):
+        if abs(x - self.vmin) < 1e-6 or abs(x - self.vmax) < 1e-6:
+            return f"{np.round(x, self.digit)}"
+        else:
+            return f"{round(x)}"
