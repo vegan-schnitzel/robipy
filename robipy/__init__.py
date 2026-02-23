@@ -7,4 +7,6 @@ of bits and bobs I wrote in the last couple of years.
 """
 
 # make modules available when importing package
-from robipy import plot, proc, test
+from robipy import plot, proc, extra, test
+
+__all__ = ["plot", "proc", "extra", "test"]
