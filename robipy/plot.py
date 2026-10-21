@@ -7,6 +7,7 @@ import matplotlib as mpl
 import cartopy.crs as ccrs
 import calendar
 
+
 def circular_stereo(ax):
     """
     Compute a circle in axes coordinates, which we can use as a boundary
@@ -22,35 +23,58 @@ def circular_stereo(ax):
     ax.set_boundary(circle, transform=ax.transAxes)
 
 
-def coastlines(ax):
+def coastlines(ax, lw=0.7):
     """
     Add coastlines with decent default options to cartopy plot.
     """
-    ax.coastlines('110m', lw=0.75, alpha=0.5)
+    ax.coastlines('110m', lw=lw, alpha=0.4)
 
 
-def gridlines(ax):
+def gridlines(ax, lw=0.4):
     """
     Add gridlines with decent default options to cartopy plot.
     """
-    ax.gridlines(linewidth=0.4, alpha=0.4, color='k', linestyle='--')
+    ax.gridlines(linewidth=lw, alpha=0.3, color='k', linestyle='--')
 
 
-def bhx_box(ax, res=50):
+def bgx_box(ax, res=50):
     """
-    Draw BHx bounding box (adding points to increase resolution).
+    Draw BGx bounding box from Athanase et al.
+    (adding points to increase resolution)
     """
     ax.plot(
-        np.append(np.linspace(140,230,res), [230, 140, 140]),
-        np.append(np.repeat(73,res), [90, 90, 73]),
+        np.append(np.linspace(140, 230, res), [230, 140, 140]),
+        np.append(np.repeat(73, res), [90, 90, 73]),
         marker=None, c='k', lw=1, alpha=0.9, transform=ccrs.PlateCarree()
+    )
+
+
+def bhx_box(ax, lw=0.85):
+    """
+    Draw BHx bounding box from serreze2011 ("characteristics of BH" paper)
+    """
+    ax.plot(
+        np.hstack((np.linspace(180, 225, 50), np.linspace(225, 180, 50), 180)).ravel(),
+        np.hstack((np.repeat(72.5, 50), np.repeat(80, 50), 72.5)).ravel(),
+        marker=None, c='k', ls="--", lw=lw, alpha=0.9, transform=ccrs.PlateCarree()
+    )
+
+
+def draw_bbox(ax, lon1, lon2, lat1, lat2, color="r"):
+    """
+    Draw bounding box using (more or less) cdo's `sellonlatbox` syntax
+    """
+    ax.plot(
+        np.hstack((np.linspace(lon1, lon2, 50), np.linspace(lon2, lon1, 50), lon1)),
+        np.hstack((np.repeat(lat1, 50), np.repeat(lat2, 50), lat1)),
+        marker=None, c=color, lw=0.85, transform=ccrs.PlateCarree()
     )
 
 
 def months_as_letter(ax):
     """
     Translates integer month values to single-letter abbreviation.
-    
+
     Parameters
     ----------
     ax : matplotlib.axes
