@@ -2,10 +2,18 @@
 Everything related to creating figures.
 """
 
-import numpy as np
-import matplotlib as mpl
-import cartopy.crs as ccrs
 import calendar
+
+import cartopy.crs as ccrs
+import matplotlib as mpl
+import numpy as np
+
+# Figure sizes for my MSc thesis layout
+PT_PER_INCH = 72.27  # TeX points, NOT 72
+TEXTWIDTH = 388.85 / PT_PER_INCH
+PAGECENTER = 439.43 / PT_PER_INCH
+PAPERWIDTH = 597.50 / PT_PER_INCH
+TEXTHEIGHT = 570.25 / PT_PER_INCH
 
 
 def circular_stereo(ax):
